@@ -133,6 +133,10 @@ func (yk *YubiKey) Close() error {
 	return err1
 }
 
+func (yk *YubiKey) SubscibeStateChange() (uint32, error) {
+	return yk.ctx.getStateChange()
+}
+
 // Open connects to a YubiKey smart card.
 func Open(card string) (*YubiKey, error) {
 	var c client

@@ -31,6 +31,7 @@ package piv
 // #cgo openbsd LDFLAGS: -lpcsclite
 // #include <PCSC/winscard.h>
 // #include <PCSC/wintypes.h>
+// #include <stdlib.h>
 import "C"
 
 import (
@@ -104,6 +105,30 @@ func (c *scContext) Connect(reader string) (*scHandle, error) {
 		return nil, err
 	}
 	return &scHandle{handle}, nil
+}
+
+const (
+	infiniteTimeout = 0xffffffff
+)
+
+type scReaderState struct {
+}
+
+func (t *scContext) getStateChange() (uint32, error) {
+	crs := make([]C.SCARD_READERSTATE, 1)
+	i := 0
+	crs[i].szReader = C.CString("ACS ACR122U PICC Interface")
+	defer C.free(unsafe.Pointer(crs[i].szReader))
+	crs[i].dwCurrentState = C.DWORD(C.SCARD_PRESENT)
+
+	r := C.SCardGetStatusChange(t.ctx,
+		C.DWORD(infiniteTimeout),
+		(C.LPSCARD_READERSTATE_A)(unsafe.Pointer(&crs[0])),
+		C.DWORD(1))
+	if r != C.SCARD_S_SUCCESS {
+		return 0, fmt.Errorf("scard error: %d", r)
+	}
+	return uint32(crs[i].dwEventState), nil
 }
 
 func (h *scHandle) Close() error {
